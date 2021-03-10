@@ -1,0 +1,55 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+    openshift.io/host.generated: "true"
+  creationTimestamp: "2021-03-05T17:37:29Z"
+  managedFields:
+  - apiVersion: route.openshift.io/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:spec:
+        f:path: {}
+        f:port:
+          .: {}
+          f:targetPort: {}
+        f:to:
+          f:kind: {}
+          f:name: {}
+          f:weight: {}
+        f:wildcardPolicy: {}
+    manager: kubectl-create
+    operation: Update
+    time: "2021-03-05T17:37:29Z"
+  - apiVersion: route.openshift.io/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        f:ingress: {}
+    manager: openshift-router
+    operation: Update
+    time: "2021-03-05T17:37:29Z"
+  name: front-end
+  namespace: robot-shop
+  resourceVersion: "1593491"
+  uid: 182c06cc-dcbf-439e-add9-1afd4c59a8bd
+spec:
+  host: front-end-robot-shop.apps.cluster-shurleyocpdest.shurleyocpdest.mg.dog8code.com
+  path: /
+  port:
+    targetPort: http
+  to:
+    kind: Service
+    name: web
+    weight: 100
+  wildcardPolicy: None
+status:
+  ingress:
+  - conditions:
+    - lastTransitionTime: "2021-03-05T17:37:29Z"
+      status: "True"
+      type: Admitted
+    host: front-end-robot-shop.apps.cluster-shurleyocpdest.shurleyocpdest.mg.dog8code.com
+    routerCanonicalHostname: apps.cluster-shurleyocpdest.shurleyocpdest.mg.dog8code.com
+    routerName: default
+    wildcardPolicy: None
