@@ -9,8 +9,6 @@ metadata:
   resourceVersion: "1593248"
   selfLink: /api/v1/namespaces/robot-shop/serviceaccounts/builder
   uid: 2be57a9e-d2df-4ed0-a557-6c8295ed899d
-  annotations:
-    test: test
 secrets:
 - name: builder-token-k5nvn
 - name: builder-dockercfg-k2r5r

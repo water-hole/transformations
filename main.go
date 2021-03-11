@@ -9,11 +9,11 @@ import (
 
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/konveyor/transformations/pkg/transform"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 )
 
 func main() {
-
 	// Read Test Data folder will paramertize for CLI
 	// pass the list of unstructured/unstructured or JSON (TBD) to a pkg.
 	// map[gk][]json
@@ -55,8 +55,6 @@ func main() {
 			continue
 		}
 
-		fmt.Printf("testing-testing")
-
 		// Get transform
 		patchesJSON, err := ioutil.ReadFile(fname)
 		if err != nil {
@@ -68,14 +66,36 @@ func main() {
 			fmt.Printf("error: %v", err)
 		}
 
+		doc, err := file.Unstructured.MarshalJSON()
+		//Determine if annoations need to be added
+		// ADD CHECK FOR IF NEW ANNOTATIONS
+		if len(file.Unstructured.GetAnnotations()) < 1 {
+			//Apply patches to doc to add annoations.
+			patches := []byte(`[
+				{"op": "add", "path": "/metadata/annotations", "value": {}}
+			]`)
+			patch, err := jsonpatch.DecodePatch(patches)
+			if err != nil {
+				fmt.Printf("\n unable to decode patch err: %v", err)
+			}
+			doc, err = patch.Apply(doc)
+			if err != nil {
+				fmt.Printf("\n unable to apply patch err: %v", err)
+			}
+		}
+
 		// apply transformation
-		output, err := pa.Apply(patchesJSON)
+		output, err := pa.Apply([]byte(doc))
 		if err != nil {
-			fmt.Printf("err: %v", err)
+			fmt.Printf("can not apply patch err: %v - file: %v", err, file.Path)
+		}
+
+		output, err = yaml.JSONToYAML(output)
+		if err != nil {
+			fmt.Printf("can not convert to yaml %v", err)
 		}
 
 		// write file to output
-		// Get fileoutput
 		dir, newName := filepath.Split(file.Path)
 		dir = strings.Replace(dir, "./test-data", "./output", 1)
 		err = os.MkdirAll(dir, 0777)
@@ -110,10 +130,13 @@ func readFiles(path string, files []os.FileInfo) []transform.TransformFile {
 				fmt.Printf("%v", err)
 			}
 
+			u := unstructured.Unstructured{}
+			u.UnmarshalJSON(json)
+
 			jsonFiles = append(jsonFiles, transform.TransformFile{
-				FileInfo: file,
-				Path:     filePath,
-				JSONData: string(json),
+				FileInfo:     file,
+				Path:         filePath,
+				Unstructured: u,
 			})
 		}
 	}

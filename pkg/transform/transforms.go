@@ -19,9 +19,9 @@ import (
 )
 
 type TransformFile struct {
-	FileInfo os.FileInfo
-	Path     string
-	JSONData string
+	FileInfo     os.FileInfo
+	Path         string
+	Unstructured unstructured.Unstructured
 }
 
 type TransformOptions struct {
@@ -61,8 +61,7 @@ func OutputTransforms(files []TransformFile, transformOptions TransformOptions) 
 	for _, file := range files {
 		fmt.Printf("\n")
 
-		u := unstructured.Unstructured{}
-		u.UnmarshalJSON([]byte(file.JSONData))
+		u := file.Unstructured
 
 		//If OwnerRef remove the file by creating white out file.
 		if len(u.GetOwnerReferences()) > 0 {
