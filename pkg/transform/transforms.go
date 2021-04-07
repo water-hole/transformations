@@ -54,6 +54,31 @@ var RouteGK = schema.GroupKind{
 	Kind:  "Route",
 }
 
+var EndpointGK = schema.GroupKind{
+	Group: "",
+	Kind:  "Endpoints",
+}
+
+var EndpointSliceGK = schema.GroupKind{
+	Group: "discovery.k8s.io",
+	Kind:  "EndpointSlice",
+}
+
+var PVCGK = schema.GroupKind{
+	Group: "",
+	Kind:  "PersistentVolumeClaim",
+}
+
+var RoleBindingGK = schema.GroupKind{
+	Group: "rbac.authorization.k8s.io",
+	Kind:  "RoleBinding",
+}
+
+var ServiceGK = schema.GroupKind{
+	Group: "",
+	Kind:  "Service",
+}
+
 const serviceOriginAnnotation = "service.alpha.openshift.io/originating-service-name"
 const routeHostGenerated = "openshift.io/host.generated"
 
@@ -72,7 +97,13 @@ func OutputTransforms(files []TransformFile, transformOptions TransformOptions) 
 
 		}
 
-		if openshiftWhiteOuts(file, u) {
+		if transformOptions.IsOpenshift && openshiftWhiteOuts(file, u) {
+			fmt.Printf("\nCreate Whiteout File %v -- %v", u.GroupVersionKind(), u.GetName())
+			createWhiteOutFile(file, transformOptions)
+			continue
+		}
+
+		if kubernetesWhiteOuts(file, u) {
 			fmt.Printf("\nCreate Whiteout File %v -- %v", u.GroupVersionKind(), u.GetName())
 			createWhiteOutFile(file, transformOptions)
 			continue
@@ -109,6 +140,10 @@ func OutputTransforms(files []TransformFile, transformOptions TransformOptions) 
 		// If Openshift create openshift specific transformations
 		if transformOptions.IsOpenshift {
 			jps := openshiftPatches(file, u)
+			jsonPatch = append(jsonPatch, jps...)
+		}
+		if u.GroupVersionKind().GroupKind() == ServiceGK {
+			jps := k8s.RemoveServiceClusterIPs()
 			jsonPatch = append(jsonPatch, jps...)
 		}
 
@@ -172,7 +207,46 @@ func openshiftWhiteOuts(file TransformFile, u unstructured.Unstructured) bool {
 	if ok && u.GetObjectKind().GroupVersionKind().GroupKind() == SecretGK {
 		return true
 	}
+	// Assume if from/to openshift that the admin rolebinding is already created for the user.
+	if u.GetName() == "admin" && u.GetObjectKind().GroupVersionKind().GroupKind() == RoleBindingGK {
+		return true
+	}
+	// Assume if from/to openshift that the image builder rolebinding is already created for the user.
+	if u.GetName() == "image-builders" && u.GetObjectKind().GroupVersionKind().GroupKind() == RoleBindingGK {
+		return true
+	}
+	// Assume if from/to openshift that the image puller rolebinding is already created for the user.
+	if u.GetName() == "image-pullers" && u.GetObjectKind().GroupVersionKind().GroupKind() == RoleBindingGK {
+		return true
+	}
 
+	if u.GetObjectKind().GroupVersionKind().GroupKind() == ServiceAccountGK {
+		for _, suffix := range []string{"deployer", "default", "builder"} {
+			if strings.HasSuffix(u.GetName(), suffix) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func kubernetesWhiteOuts(file TransformFile, u unstructured.Unstructured) bool {
+	// Endpoints are cluster specfici and usually managed by the service.
+	// In some rare cases a user may create this but they would have to update it
+	// with the new address spaces.
+	if u.GetObjectKind().GroupVersionKind().GroupKind() == EndpointGK {
+		return true
+	}
+	// EndpointSlices are the next iteration of endpoints and should also be removed.
+	if u.GetObjectKind().GroupVersionKind().GroupKind() == EndpointSliceGK {
+		return true
+	}
+
+	// Assume PVC's are transfered with storage transfer workflow.
+	if u.GetObjectKind().GroupVersionKind().GroupKind() == PVCGK {
+		return true
+	}
 	return false
 }
 

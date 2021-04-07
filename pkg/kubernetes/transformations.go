@@ -81,3 +81,14 @@ func UpdateRoleBindingSVCACCTNamespace(newNamespace string, numberOfSubjects int
 	}
 	return patch
 }
+
+func RemoveServiceClusterIPs() jsonpatch.Patch {
+	patchJSON := fmt.Sprintf(`[
+{"op": "remove", "path": "/spec/clusterIP"}
+]`)
+	patch, err := jsonpatch.DecodePatch([]byte(patchJSON))
+	if err != nil {
+		fmt.Printf("%v", err)
+	}
+	return patch
+}

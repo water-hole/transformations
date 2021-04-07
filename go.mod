@@ -1,6 +1,6 @@
 module github.com/konveyor/transformations
 
-go 1.14
+go 1.16
 
 require (
 	github.com/evanphx/json-patch v4.9.0+incompatible
