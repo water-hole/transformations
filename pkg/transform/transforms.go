@@ -276,8 +276,12 @@ func createWhiteOutFile(file TransformFile, opts TransformOptions) {
 		panic(err)
 	}
 
-	_, err = os.Create(fname)
+	f, err := os.Create(fname)
 	if err != nil {
+		fmt.Printf("%v", err)
+		panic(err)
+	}
+	if err = f.Close(); err != nil {
 		fmt.Printf("%v", err)
 		panic(err)
 	}
