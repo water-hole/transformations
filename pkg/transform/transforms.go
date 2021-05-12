@@ -69,14 +69,24 @@ var PVCGK = schema.GroupKind{
 	Kind:  "PersistentVolumeClaim",
 }
 
-var RoleBindingGK = schema.GroupKind{
+var AOS3RoleBindingGK = schema.GroupKind{
 	Group: "rbac.authorization.k8s.io",
+	Kind:  "RoleBinding",
+}
+
+var OCP4RoleBindingGK = schema.GroupKind{
+	Group: "authorization.openshift.io",
 	Kind:  "RoleBinding",
 }
 
 var ServiceGK = schema.GroupKind{
 	Group: "",
 	Kind:  "Service",
+}
+
+var LimitRangeGK = schema.GroupKind{
+	Group: "",
+	Kind:  "LimitRange",
 }
 
 const serviceOriginAnnotation = "service.alpha.openshift.io/originating-service-name"
@@ -208,16 +218,14 @@ func openshiftWhiteOuts(file TransformFile, u unstructured.Unstructured) bool {
 		return true
 	}
 	// Assume if from/to openshift that the admin rolebinding is already created for the user.
-	if u.GetName() == "admin" && u.GetObjectKind().GroupVersionKind().GroupKind() == RoleBindingGK {
-		return true
-	}
-	// Assume if from/to openshift that the image builder rolebinding is already created for the user.
-	if u.GetName() == "image-builders" && u.GetObjectKind().GroupVersionKind().GroupKind() == RoleBindingGK {
-		return true
-	}
-	// Assume if from/to openshift that the image puller rolebinding is already created for the user.
-	if u.GetName() == "image-pullers" && u.GetObjectKind().GroupVersionKind().GroupKind() == RoleBindingGK {
-		return true
+	if u.GetName() == "admin" ||
+		u.GetName() == "system:image-builders" ||
+		u.GetName() == "system:image-pullers" ||
+		u.GetName() == "system:deployers" {
+		if u.GetObjectKind().GroupVersionKind().GroupKind() == AOS3RoleBindingGK ||
+			u.GetObjectKind().GroupVersionKind().GroupKind() == OCP4RoleBindingGK {
+			return true
+		}
 	}
 
 	if u.GetObjectKind().GroupVersionKind().GroupKind() == ServiceAccountGK {
@@ -226,6 +234,24 @@ func openshiftWhiteOuts(file TransformFile, u unstructured.Unstructured) bool {
 				return true
 			}
 		}
+	}
+
+	if u.GetObjectKind().GroupVersionKind().GroupKind() == SecretGK {
+		for _, prefix := range []string{
+			"deployer-dockercfg",
+			"deployer-token",
+			"default-dockercfg",
+			"default-token",
+			"builder-dockercfg",
+			"builder-token"} {
+			if strings.HasPrefix(u.GetName(), prefix) {
+				return true
+			}
+		}
+	}
+
+	if u.GetObjectKind().GroupVersionKind().GroupKind() == LimitRangeGK {
+		return true
 	}
 
 	return false
